@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHL Assessment</title>
+    <style>
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000;
+        }
+
+        /* ===== FULLSCREEN PROMPT ===== */
+        .fs-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.88);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            z-index: 99999;
+        }
+        .fs-overlay.hidden { display: none; }
+        .fs-overlay h2 { color: #fff; font-size: 24px; font-weight: 600; }
+        .fs-overlay p { color: #bbb; font-size: 14px; text-align: center; max-width: 380px; line-height: 1.6; }
+        .fs-overlay button {
+            background: #2d5a3d; color: #fff; border: none;
+            padding: 14px 44px; border-radius: 28px; font-size: 15px;
+            font-weight: 700; cursor: pointer; letter-spacing: 1px;
+        }
+        .fs-overlay button:hover { background: #234a31; }
+
+        /* ===== MAIN WINDOW ===== */
+        .window {
+            width: 100vw;
+            height: 100vh;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ===== ROW 1: TAB BAR ===== */
+        .tab-bar {
+            height: 30px;
+            display: flex;
+            align-items: stretch;
+            background: #dfe1e5;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .tab {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0 12px;
+            background: #f1f3f4;
+            border-radius: 8px 8px 0 0;
+            margin-top: 4px;
+            margin-left: 6px;
+            font-size: 11px;
+            color: #333;
+            min-width: 90px;
+            position: relative;
+        }
+        .tab-icon {
+            width: 14px; height: 14px;
+            background: #0b5e70;
+            border-radius: 2px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 6px; color: #fff; font-weight: 800;
+        }
+        .tab-label { font-size: 11px; color: #555; }
+        .tab-x {
+            margin-left: auto;
+            font-size: 14px; color: #999; cursor: pointer; line-height: 1;
+        }
+        .tab-bar-fill {
+            flex: 1;
+            background: #87ceeb;
+            margin-top: 0;
+        }
+        .tab-bar-close {
+            width: 36px;
+            background: #e81123;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 16px; cursor: pointer;
+        }
+        .tab-bar-close:hover { background: #c40f1f; }
+
+        /* ===== ROW 2: TOOLBAR ===== */
+        .toolbar {
+            height: 28px;
+            display: flex;
+            align-items: center;
+            padding: 0 6px;
+            background: #f1f3f4;
+            border-bottom: 1px solid #ddd;
+            gap: 0;
+            flex-shrink: 0;
+        }
+        .tb-btn {
+            width: 26px; height: 26px;
+            display: flex; align-items: center; justify-content: center;
+            background: none; border: none;
+            color: #777; font-size: 14px; cursor: pointer;
+        }
+        .tb-btn.muted { color: #c0c0c0; cursor: default; }
+        .tb-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+        /* ===== ROW 3: SHL HEADER ===== */
+        .shl-header {
+            height: 52px;
+            display: flex;
+            align-items: center;
+            padding: 0 22px;
+            border-bottom: 1px solid #ddd;
+            background: #fff;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .shl-logo {
+            font-size: 30px;
+            font-weight: 700;
+            color: #1a3c4d;
+            letter-spacing: 1.5px;
+        }
+        .timer-wrap {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .timer-pill {
+            border: 1.5px solid #666;
+            border-radius: 18px;
+            padding: 4px 22px;
+            font-size: 15px;
+            font-weight: 500;
+            color: #333;
+            letter-spacing: 3px;
+            background: #f0f0f0;
+        }
+        .hdr-right {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .hdr-action {
+            display: flex; align-items: center; gap: 4px;
+            font-size: 13px; color: #444; cursor: pointer;
+        }
+        .hdr-action svg {
+            width: 17px; height: 17px; stroke: #444; fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+        }
+        .hamburger { display: flex; flex-direction: column; gap: 3px; cursor: pointer; padding: 2px; }
+        .hamburger span { width: 17px; height: 2px; background: #444; display: block; }
+
+        /* ===== CONTENT AREA ===== */
+        .content {
+            flex: 1;
+            display: flex;
+            background: #f5f5f5;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* LEFT PANEL */
+        .left-panel {
+            width: 44%;
+            padding: 26px 28px;
+            flex-shrink: 0;
+        }
+        .q-heading {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1a3c4d;
+            margin-bottom: 12px;
+        }
+        .q-text {
+            font-size: 13px;
+            color: #444;
+            line-height: 1.6;
+        }
+
+        /* DIVIDER */
+        .divider {
+            width: 1px;
+            background: #d8d8d8;
+            margin: 18px 0;
+            flex-shrink: 0;
+        }
+
+        /* RIGHT PANEL */
+        .right-panel {
+            flex: 1;
+            padding: 26px 24px;
+            padding-right: 50px;
+            display: flex;
+            flex-direction: column;
+        }
+        .opt-heading {
+            font-size: 14px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 16px;
+        }
+
+        /* OPTION ROWS – flat rows separated by thin lines (matching screenshot) */
+        .opt-list {
+            display: flex;
+            flex-direction: column;
+        }
+        .opt-row {
+            padding: 14px 16px;
+            font-size: 13.5px;
+            color: #333;
+            border: 1px solid #d0d0d0;
+            border-radius: 5px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background 0.22s ease, color 0.22s ease;
+            background: transparent;
+        }
+
+        .opt-row:hover {
+            background: #eaf6f8;
+        }
+        .opt-row.selected {
+            background: #17697a;
+            color: #fff;
+            border-color: #17697a;
+        }
+
+
+        /* ===== QUESTION NAV (right edge vertical dots) ===== */
+        .q-nav {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 38px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 0;
+            background: #f5f5f5;
+            overflow-y: auto;
+            scrollbar-width: none;
+            z-index: 5;
+        }
+        .q-nav::-webkit-scrollbar { display: none; }
+
+        .dots-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+        /* vertical line behind the dots */
+        .dots-wrap::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            background: #444;
+            z-index: 0;
+        }
+        .dot {
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 9px; font-weight: 700;
+            cursor: pointer;
+            z-index: 1;
+            margin: 3px 0;
+            transition: all 0.18s ease;
+            position: relative;
+        }
+        /* default: green filled */
+        .dot.filled {
+            background: #2d5a3d;
+            color: #fff;
+            border: 2px solid #2d5a3d;
+        }
+        /* current question: white/empty with dark border */
+        .dot.current {
+            background: #fff;
+            color: #333;
+            border: 2px solid #888;
+        }
+        .dot:hover { transform: scale(1.12); }
+
+        /* ===== BOTTOM BAR ===== */
+        .bottom-bar {
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 22px;
+            background: #ececec;
+            border-top: 1px solid #d8d8d8;
+            flex-shrink: 0;
+        }
+        .submit-btn {
+            background: #2d5a3d;
+            color: #fff;
+            border: none;
+            padding: 10px 26px;
+            border-radius: 22px;
+            font-size: 11.5px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+        .submit-btn:hover { background: #234a31; }
+        .submit-btn:active { background: #1c3d28; }
+    </style>
+</head>
+<body>
+
+<!-- Fullscreen prompt -->
+<div class="fs-overlay" id="fsOverlay">
+    <h2>SHL Assessment</h2>
+    <p>This assessment must be taken in full-screen mode. Click the button below to begin.</p>
+    <button id="startBtn">START ASSESSMENT</button>
+</div>
+
+<div class="window">
+
+    <!-- ROW 1: Tab bar -->
+    <div class="tab-bar">
+        <div class="tab">
+            <div class="tab-icon">SHL</div>
+            <span class="tab-label">SHL</span>
+            <span class="tab-x">×</span>
+        </div>
+        <div class="tab-bar-fill"></div>
+        <div class="tab-bar-close">✕</div>
+    </div>
+
+    <!-- ROW 2: Toolbar -->
+    <div class="toolbar">
+        <button class="tb-btn muted" title="Back">
+            <svg viewBox="0 0 24 24"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+        </button>
+        <button class="tb-btn muted" title="Forward">
+            <svg viewBox="0 0 24 24"><path d="M5 12h14"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+        <button class="tb-btn" title="Close">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <button class="tb-btn" title="Refresh">
+            <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        </button>
+        <button class="tb-btn" title="Info">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </button>
+        <button class="tb-btn" title="Bookmark">
+            <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        </button>
+    </div>
+
+    <!-- ROW 3: SHL Header -->
+    <div class="shl-header">
+        <div class="shl-logo">SHL</div>
+        <div class="timer-wrap">
+            <div class="timer-pill" id="timer">30 : 00</div>
+        </div>
+        <div class="hdr-right">
+            <span class="hdr-action" title="Fullscreen">
+                <svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/></svg>
+            </span>
+            <span class="hdr-action" title="Help">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <span>Help</span>
+            </span>
+            <span class="hdr-action" title="Exit">
+                <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                <span>Exit</span>
+            </span>
+            <div class="hamburger" title="Menu"><span></span><span></span><span></span></div>
+        </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+        <div class="left-panel">
+            <div class="q-heading">Choose the correct option.</div>
+            <div class="q-text" id="qText"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="right-panel">
+            <div class="opt-heading">Options</div>
+            <div class="opt-list" id="optList"></div>
+        </div>
+        <div class="q-nav">
+            <div class="dots-wrap" id="dotsWrap"></div>
+        </div>
+    </div>
+
+    <!-- BOTTOM -->
+    <div class="bottom-bar">
+        <button class="submit-btn" id="submitBtn">SUBMIT ANSWER</button>
+    </div>
+
+</div>
+
+<script>
+(function(){
+    // 30 questions
+    // ===== ENGLISH (Q1–Q10) =====
+    // ===== QUANTITATIVE ABILITY (Q11–Q20) =====
+    // ===== LOGICAL ABILITY (Q21–Q30) =====
+    var questions = [
+        // ── ENGLISH ──
+        { t: "Choose the word most similar in meaning to 'Benevolent'.", o: ["Cruel","Kind","Angry","Timid"] },
+        { t: "Choose the correct spelling.", o: ["Accomodation","Accommodation","Acomodation","Accomodaton"] },
+        { t: "Select the word that is opposite in meaning to 'Gregarious'.", o: ["Sociable","Friendly","Reclusive","Talkative"] },
+        { t: "Fill in the blank: She ___ to the market every Sunday.", o: ["go","goes","going","gone"] },
+        { t: "Identify the error: 'Each of the students have submitted their assignment.'", o: ["Each of","the students","have submitted","their assignment"] },
+        { t: "Choose the correct sentence.", o: ["He don't know nothing.","He doesn't knows anything.","He doesn't know anything.","He don't knows anything."] },
+        { t: "Select the synonym of 'Ambiguous'.", o: ["Clear","Vague","Definite","Precise"] },
+        { t: "Fill in the blank: If I ___ rich, I would travel the world.", o: ["am","was","were","be"] },
+        { t: "Choose the antonym of 'Eloquent'.", o: ["Articulate","Fluent","Inarticulate","Persuasive"] },
+        { t: "Select the correctly punctuated sentence.", o: ["Its a beautiful day, isnt it?","It's a beautiful day, isn't it?","Its a beautiful day isn't it?","It's a beautiful day isnt it?"] },
+
+        // ── QUANTITATIVE ABILITY ──
+        { t: "What is 15% of 200?", o: ["25","30","35","40"] },
+        { t: "If a shirt costs ₹800 and is sold at ₹1000, what is the profit percentage?", o: ["20%","25%","30%","15%"] },
+        { t: "A train 150m long passes a pole in 15 seconds. What is its speed in km/hr?", o: ["36 km/hr","40 km/hr","54 km/hr","45 km/hr"] },
+        { t: "The average of 5 numbers is 20. If one number is excluded, the average becomes 18. What is the excluded number?", o: ["24","28","26","30"] },
+        { t: "If x + y = 10 and x − y = 4, what is the value of x?", o: ["5","6","7","8"] },
+        { t: "A can do a piece of work in 10 days and B in 15 days. In how many days can they do it together?", o: ["5 days","6 days","7 days","8 days"] },
+        { t: "What is the compound interest on ₹5000 at 10% per annum for 2 years?", o: ["₹1000","₹1050","₹1100","₹1025"] },
+        { t: "The ratio of two numbers is 3:5. If their sum is 80, what is the larger number?", o: ["30","40","50","60"] },
+        { t: "A car travels 240 km in 4 hours. What is its speed?", o: ["50 km/hr","55 km/hr","60 km/hr","65 km/hr"] },
+        { t: "If the area of a circle is 154 cm², what is its radius? (π = 22/7)", o: ["7 cm","14 cm","21 cm","49 cm"] },
+
+        // ── LOGICAL ABILITY ──
+        { t: "Find the next number in the series: 2, 6, 12, 20, 30, ?", o: ["40","42","44","36"] },
+        { t: "In a certain code language, 'COMPUTER' is written as 'DPNQVUFS'. How is 'MOBILE' written?", o: ["NPCJMF","NPPCJM","NPCJLF","NPCJMG"] },
+        { t: "If 'A' is coded as 1 and 'BAD' is coded as 7, then what is the code for 'FACE'?", o: ["14","15","16","17"] },
+        { t: "Pointing to a man, a woman said, 'He is the son of my father's only daughter.' How is the man related to the woman?", o: ["Brother","Son","Nephew","Cousin"] },
+        { t: "Find the odd one out: Apple, Mango, Potato, Banana", o: ["Apple","Mango","Potato","Banana"] },
+        { t: "If ROSE is coded as 6821, CHAIR is coded as 73456, then SEARCH is coded as?", o: ["214673","216__(error)","214637","216473"] },
+        { t: "A is B's sister. C is B's mother. D is C's father. E is D's mother. How is A related to D?", o: ["Granddaughter","Daughter","Grandmother","Grandfather"] },
+        { t: "Find the missing number: 3, 9, 27, 81, ?", o: ["162","200","243","270"] },
+        { t: "If South-East becomes North, then what does North-East become?", o: ["South","West","North-West","South-West"] },
+        { t: "Arrange the words in logical order: 1. Sentence  2. Word  3. Letter  4. Paragraph  5. Chapter", o: ["3,2,1,4,5","2,3,1,4,5","3,2,4,1,5","1,2,3,4,5"] }
+    ];
+
+    var cur = 0;
+    var ans = new Array(questions.length).fill(null);
+    var secs = 30 * 60;
+    var interval = null;
+
+    // DOM refs
+    var qText = document.getElementById('qText');
+    var optList = document.getElementById('optList');
+    var dotsWrap = document.getElementById('dotsWrap');
+    var timerEl = document.getElementById('timer');
+    var submitBtn = document.getElementById('submitBtn');
+
+    // Build dots
+    function buildDots(){
+        dotsWrap.innerHTML = '';
+        for(var i = 0; i < questions.length; i++){
+            var d = document.createElement('div');
+            d.className = 'dot filled';
+            d.textContent = i + 1;
+            d.setAttribute('data-i', i);
+            d.addEventListener('click', (function(idx){ return function(){ load(idx); }; })(i));
+            dotsWrap.appendChild(d);
+        }
+        refreshDots();
+    }
+
+    function refreshDots(){
+        var dots = dotsWrap.children;
+        for(var i = 0; i < dots.length; i++){
+            if(i === cur){
+                dots[i].className = 'dot current';
+            } else {
+                dots[i].className = 'dot filled';
+            }
+        }
+    }
+
+    function load(idx){
+        cur = idx;
+        var q = questions[idx];
+        qText.textContent = q.t;
+        optList.innerHTML = '';
+        for(var j = 0; j < q.o.length; j++){
+            var row = document.createElement('div');
+            row.className = 'opt-row';
+            if(ans[idx] === j) row.classList.add('selected');
+            row.textContent = q.o[j];
+            row.addEventListener('click', (function(jj, el){ return function(){
+                // deselect all
+                var rows = optList.querySelectorAll('.opt-row');
+                for(var k = 0; k < rows.length; k++) rows[k].classList.remove('selected');
+                el.classList.add('selected');
+                // Oops: el is not defined at click time. We need 'this'
+            }; })(j, row));
+            // fix: use closure properly
+            (function(jj){
+                row.addEventListener('click', function(){
+                    var rows = optList.querySelectorAll('.opt-row');
+                    for(var k = 0; k < rows.length; k++) rows[k].classList.remove('selected');
+                    this.classList.add('selected');
+                    ans[cur] = jj;
+                    refreshDots();
+                });
+            })(j);
+            optList.appendChild(row);
+        }
+        refreshDots();
+    }
+
+    // Fix: remove duplicate listeners – rebuild using only one approach
+    function load(idx){
+        cur = idx;
+        var q = questions[idx];
+        qText.textContent = q.t;
+        optList.innerHTML = '';
+        for(var j = 0; j < q.o.length; j++){
+            (function(jj){
+                var row = document.createElement('div');
+                row.className = 'opt-row';
+                if(ans[idx] === jj) row.classList.add('selected');
+                row.textContent = q.o[jj];
+                row.addEventListener('click', function(){
+                    var rows = optList.querySelectorAll('.opt-row');
+                    for(var k = 0; k < rows.length; k++) rows[k].classList.remove('selected');
+                    this.classList.add('selected');
+                    ans[cur] = jj;
+                    refreshDots();
+                });
+                optList.appendChild(row);
+            })(j);
+        }
+        refreshDots();
+    }
+
+    submitBtn.addEventListener('click', function(){
+        if(ans[cur] === null){
+            submitBtn.style.transform = 'translateX(-3px)';
+            setTimeout(function(){ submitBtn.style.transform = 'translateX(3px)'; }, 80);
+            setTimeout(function(){ submitBtn.style.transform = ''; }, 160);
+            return;
+        }
+        if(cur < questions.length - 1){
+            load(cur + 1);
+        } else {
+            alert('Assessment complete! Thank you.');
+        }
+    });
+
+    function tick(){
+        if(secs <= 0){ clearInterval(interval); alert('Time is up!'); return; }
+        secs--;
+        var m = Math.floor(secs/60).toString(); if(m.length<2) m='0'+m;
+        var s = (secs%60).toString(); if(s.length<2) s='0'+s;
+        timerEl.textContent = m + ' : ' + s;
+    }
+
+    // Fullscreen
+    var fsOverlay = document.getElementById('fsOverlay');
+    document.getElementById('startBtn').addEventListener('click', function(){
+        var el = document.documentElement;
+        if(el.requestFullscreen) el.requestFullscreen();
+        else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+        else if(el.msRequestFullscreen) el.msRequestFullscreen();
+        fsOverlay.classList.add('hidden');
+        interval = setInterval(tick, 1000);
+    });
+    document.addEventListener('fullscreenchange', function(){
+        if(!document.fullscreenElement){
+            fsOverlay.classList.remove('hidden');
+            if(interval) clearInterval(interval);
+        }
+    });
+
+    buildDots();
+    load(0);
+})();
+</script>
+</body>
+</html>
