@@ -580,20 +580,78 @@
         timerEl.textContent = m + ' : ' + s;
     }
 
-    // Fullscreen
+    // ===== FULLSCREEN (aggressive, covers entire screen) =====
     var fsOverlay = document.getElementById('fsOverlay');
-    document.getElementById('startBtn').addEventListener('click', function(){
+    var timerRunning = false;
+
+    function goFullscreen(){
         var el = document.documentElement;
-        if(el.requestFullscreen) el.requestFullscreen();
-        else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-        else if(el.msRequestFullscreen) el.msRequestFullscreen();
+        // Try every browser variant
+        if(el.requestFullscreen) {
+            el.requestFullscreen({ navigationUI: "hide" }).catch(function(){});
+        } else if(el.webkitRequestFullscreen) {
+            el.webkitRequestFullscreen();
+        } else if(el.mozRequestFullScreen) {
+            el.mozRequestFullScreen();
+        } else if(el.msRequestFullscreen) {
+            el.msRequestFullscreen();
+        }
+    }
+
+    function isFullscreen(){
+        return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+    }
+
+    // Start button click
+    document.getElementById('startBtn').addEventListener('click', function(){
+        goFullscreen();
         fsOverlay.classList.add('hidden');
-        interval = setInterval(tick, 1000);
+        if(!timerRunning){
+            interval = setInterval(tick, 1000);
+            timerRunning = true;
+        }
     });
-    document.addEventListener('fullscreenchange', function(){
-        if(!document.fullscreenElement){
+
+    // If user exits fullscreen, show overlay again and pause timer
+    function onFsChange(){
+        if(!isFullscreen()){
             fsOverlay.classList.remove('hidden');
-            if(interval) clearInterval(interval);
+            if(interval){ clearInterval(interval); timerRunning = false; }
+        } else {
+            fsOverlay.classList.add('hidden');
+            if(!timerRunning){
+                interval = setInterval(tick, 1000);
+                timerRunning = true;
+            }
+        }
+    }
+    document.addEventListener('fullscreenchange', onFsChange);
+    document.addEventListener('webkitfullscreenchange', onFsChange);
+    document.addEventListener('mozfullscreenchange', onFsChange);
+    document.addEventListener('MSFullscreenChange', onFsChange);
+
+    // Block Escape key from exiting fullscreen (browser may still exit, but we re-prompt)
+    document.addEventListener('keydown', function(e){
+        if(e.key === 'Escape' || e.keyCode === 27){
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        // F11 — also try to go fullscreen
+        if(e.key === 'F11' || e.keyCode === 122){
+            e.preventDefault();
+            goFullscreen();
+        }
+    }, true);
+
+    // Also clicking anywhere on overlay triggers fullscreen (backup)
+    fsOverlay.addEventListener('click', function(e){
+        if(e.target === fsOverlay){
+            goFullscreen();
+            fsOverlay.classList.add('hidden');
+            if(!timerRunning){
+                interval = setInterval(tick, 1000);
+                timerRunning = true;
+            }
         }
     });
 
